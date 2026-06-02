@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>PURPLE ARROW - Zombie Dash</title>
     <style>
         body {
@@ -12,24 +12,48 @@
             color: #0ff;
             font-family: 'Courier New', monospace;
             overflow: hidden;
+            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
         }
         canvas {
             image-rendering: pixelated;
-            border: 3px solid #0ff;
-            box-shadow: 0 0 30px #0ff;
+            border: 4px solid #0ff;
+            box-shadow: 0 0 40px #0ff;
         }
         #ui {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            top: 15px;
+            left: 15px;
             color: #0ff;
             text-shadow: 0 0 10px #0ff;
-            pointer-events: none;
             font-size: 18px;
+            pointer-events: none;
+        }
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 30px 50px;
+            border: 3px solid #f00;
+            color: #f00;
+            font-size: 42px;
+            text-align: center;
+            display: none;
+            border-radius: 15px;
+        }
+        #restartBtn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 24px;
+            background: #c026d3;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -41,60 +65,88 @@
         <div>Super: <span id="super">0</span>/100</div>
     </div>
 
+    <div id="gameOver">
+        GAME OVER<br>
+        <span style="font-size:28px">Punteggio: <span id="finalScore">0</span></span><br><br>
+        <button id="restartBtn">Ricomincia</button>
+    </div>
+
     <script>
         const canvas = document.getElementById('game');
         const ctx = canvas.getContext('2d');
         let score = 0, health = 100, superCharge = 0, gameRunning = true;
 
         function resizeCanvas() {
-            canvas.width = Math.min(window.innerWidth * 0.95, 1280);
-            canvas.height = Math.min(window.innerHeight * 0.85, 640);
+            canvas.width = Math.min(window.innerWidth * 0.98, 1280);
+            canvas.height = Math.min(window.innerHeight * 0.92, 680);
         }
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        let player = { x: 120, y: canvas.height / 2, width: 50, height: 36, speed: 7 };
+        let player = { x: 140, y: canvas.height / 2, width: 55, height: 40, speed: 7.5 };
         let keys = {}, bullets = [], superBullets = [], enemies = [], particles = [];
 
-        window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; if ((e.key === 'r' || e.key === 'R') && !gameRunning) resetGame(); });
-        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+        // Controlli tastiera
+        window.addEventListener('keydown', e => {
+            keys[e.key.toLowerCase()] = true;
+        });
+        window.addEventListener('keyup', e => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        // Sparo e Super
         canvas.addEventListener('click', () => { if(gameRunning) shoot(); });
-        canvas.addEventListener('contextmenu', e => { e.preventDefault(); if(superCharge >= 100) launchSuperAttack(); });
+        
+        // Super con click destro + doppio tap su mobile
+        canvas.addEventListener('contextmenu', e => {
+            e.preventDefault();
+            if (gameRunning && superCharge >= 100) launchSuperAttack();
+        });
+
+        let lastTap = 0;
+        canvas.addEventListener('touchend', e => {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTap;
+            if (tapLength < 500 && tapLength > 0) {
+                if (superCharge >= 100) launchSuperAttack();
+            }
+            lastTap = currentTime;
+        });
 
         function shoot() {
-            bullets.push({ x: player.x + 45, y: player.y + 18, speed: 20 });
+            bullets.push({ x: player.x + 48, y: player.y + 20, speed: 21 });
         }
 
         function launchSuperAttack() {
             if (superCharge < 100) return;
             superCharge = 0;
-            for (let i = -5; i <= 5; i++) {
+            for (let i = -6; i <= 6; i++) {
                 superBullets.push({
-                    x: player.x + 45,
-                    y: player.y + 18 + i*12,
-                    speed: 16,
-                    angle: i * 6
+                    x: player.x + 50,
+                    y: player.y + 20 + i * 11,
+                    speed: 17,
+                    angle: i * 5.5
                 });
             }
         }
 
         class Enemy {
             constructor() {
-                this.x = canvas.width + 100;
-                this.y = Math.random() * (canvas.height - 60) + 30;
-                this.size = 22;
-                this.speed = 2.8 + Math.random() * 1.2;
+                this.x = canvas.width + 80;
+                this.y = Math.random() * (canvas.height - 80) + 40;
+                this.size = 24;
+                this.speed = 3 + Math.random() * 1.5;
                 this.health = 3;
             }
         }
 
         function createExplosion(x, y, color = '#0ff') {
-            for (let i = 0; i < 28; i++) {
+            for (let i = 0; i < 32; i++) {
                 particles.push({
                     x, y,
-                    vx: Math.random()*10-5,
-                    vy: Math.random()*10-5,
-                    life: 28,
+                    vx: Math.random() * 11 - 5.5,
+                    vy: Math.random() * 11 - 5.5,
+                    life: 32,
                     color
                 });
             }
@@ -105,6 +157,7 @@
             bullets = []; superBullets = []; enemies = []; particles = [];
             player.y = canvas.height / 2;
             gameRunning = true;
+            document.getElementById('gameOver').style.display = 'none';
         }
 
         function update() {
@@ -112,16 +165,15 @@
 
             if (keys['arrowup'] || keys['w']) player.y -= player.speed;
             if (keys['arrowdown'] || keys['s']) player.y += player.speed;
-            if (keys['arrowleft'] || keys['a']) player.x -= player.speed * 0.6;
-            if (keys['arrowright'] || keys['d']) player.x += player.speed * 0.6;
+            if (keys['arrowleft'] || keys['a']) player.x -= player.speed * 0.7;
+            if (keys['arrowright'] || keys['d']) player.x += player.speed * 0.7;
 
-            player.x = Math.max(40, Math.min(canvas.width * 0.4, player.x));
-            player.y = Math.max(25, Math.min(canvas.height - 45, player.y));
+            player.x = Math.max(40, Math.min(canvas.width * 0.45, player.x));
+            player.y = Math.max(30, Math.min(canvas.height - 50, player.y));
 
             score += 1;
 
-            // Spawn nemici
-            if (Math.random() < 0.055 + score/10000) enemies.push(new Enemy());
+            if (Math.random() < 0.06 + score/12000) enemies.push(new Enemy());
 
             // Proiettili
             for (let i = bullets.length-1; i >= 0; i--) {
@@ -133,30 +185,29 @@
                 let b = superBullets[i];
                 b.x += b.speed * Math.cos(b.angle * Math.PI/180);
                 b.y += b.speed * Math.sin(b.angle * Math.PI/180);
-                if (b.x > canvas.width + 100) superBullets.splice(i,1);
+                if (b.x > canvas.width + 120) superBullets.splice(i,1);
             }
 
-            // Nemici
+            // Nemici + collisioni
             for (let i = enemies.length-1; i >= 0; i--) {
                 let e = enemies[i];
-                e.x -= e.speed + 3.5;
+                e.x -= e.speed + 3.8;
 
-                if (Math.hypot(e.x - player.x -25, e.y - player.y -18) < 40) {
-                    health -= 22;
+                if (Math.hypot(e.x - player.x - 28, e.y - player.y - 20) < 45) {
+                    health -= 25;
                     createExplosion(e.x, e.y, '#f00');
                     enemies.splice(i,1);
-                    if (health <= 0) gameRunning = false;
+                    if (health <= 0) endGame();
                     continue;
                 }
 
-                // Collisioni proiettili
                 for (let j = bullets.length-1; j >= 0; j--) {
-                    if (Math.hypot(bullets[j].x - e.x, bullets[j].y - e.y) < e.size) {
+                    if (Math.hypot(bullets[j].x - e.x, bullets[j].y - e.y) < e.size + 6) {
                         e.health--;
                         bullets.splice(j,1);
                         if (e.health <= 0) {
-                            score += 120;
-                            superCharge = Math.min(100, superCharge + 22);
+                            score += 130;
+                            superCharge = Math.min(100, superCharge + 25);
                             createExplosion(e.x, e.y, '#f0f');
                             enemies.splice(i,1);
                         }
@@ -169,89 +220,93 @@
             for (let i = particles.length-1; i >= 0; i--) {
                 let p = particles[i];
                 p.x += p.vx; p.y += p.vy;
-                p.life--; p.vx *= 0.95; p.vy *= 0.95;
+                p.life--; p.vx *= 0.96; p.vy *= 0.96;
                 if (p.life <= 0) particles.splice(i,1);
             }
 
-            if (superCharge < 100) superCharge += 0.1;
+            if (superCharge < 100) superCharge += 0.12;
+        }
+
+        function endGame() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').style.display = 'block';
         }
 
         function draw() {
             ctx.fillStyle = '#0a0015';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Linee di movimento
-            ctx.strokeStyle = '#4b0082';
-            for (let i = 0; i < 25; i++) {
-                let y = (Date.now()/25 + i*45) % (canvas.height + 100) - 50;
+            // Linee sfondo
+            ctx.strokeStyle = '#5e0080';
+            for (let i = 0; i < 28; i++) {
+                let y = (Date.now()/22 + i*38) % (canvas.height + 120) - 60;
                 ctx.beginPath();
                 ctx.moveTo(0, y);
-                ctx.lineTo(canvas.width, y + 25);
+                ctx.lineTo(canvas.width, y + 35);
                 ctx.stroke();
             }
 
-            // === FRECCETTA VIOLA MIGLIORATA ===
+            // ==================== FRECCETTA VIOLA ====================
             ctx.save();
-            ctx.translate(player.x + 25, player.y + 18);
-            ctx.shadowBlur = 35;
+            ctx.translate(player.x + 28, player.y + 20);
+            ctx.shadowBlur = 45;
             ctx.shadowColor = '#ff00ff';
 
-            // Corpo freccia
             ctx.fillStyle = '#c026d3';
             ctx.beginPath();
-            ctx.moveTo(28, 0);           // punta
-            ctx.lineTo(-22, -22);        // ala sinistra
-            ctx.lineTo(-8, 0);           // rientro
-            ctx.lineTo(-22, 22);         // ala destra
+            ctx.moveTo(32, 0);      // punta
+            ctx.lineTo(-25, -26);
+            ctx.lineTo(-10, 0);
+            ctx.lineTo(-25, 26);
             ctx.closePath();
             ctx.fill();
 
-            // Bordo luminoso
             ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 4;
             ctx.stroke();
 
-            // Glow centrale
-            ctx.fillStyle = '#ffffff';
-            ctx.shadowBlur = 20;
+            // Centro luminoso
+            ctx.shadowBlur = 25;
             ctx.shadowColor = '#fff';
+            ctx.fillStyle = '#ffffff';
             ctx.beginPath();
-            ctx.arc(8, 0, 7, 0, Math.PI*2);
+            ctx.arc(10, 0, 9, 0, Math.PI*2);
             ctx.fill();
 
             ctx.restore();
 
-            // Proiettili normali
-            ctx.shadowBlur = 20;
+            // Proiettili
+            ctx.shadowBlur = 22;
             ctx.shadowColor = '#00ffff';
             ctx.fillStyle = '#00ffff';
-            for (let b of bullets) ctx.fillRect(b.x, b.y-4, 26, 8);
+            for (let b of bullets) ctx.fillRect(b.x, b.y-5, 28, 10);
 
-            // Super proiettili
-            ctx.shadowBlur = 35;
+            // Super
+            ctx.shadowBlur = 40;
             ctx.shadowColor = '#ff00ff';
             ctx.fillStyle = '#ff00ff';
-            for (let b of superBullets) ctx.fillRect(b.x, b.y-6, 32, 12);
+            for (let b of superBullets) ctx.fillRect(b.x, b.y-7, 35, 14);
 
-            // Zombie blu
+            // Zombie
             for (let e of enemies) {
-                ctx.shadowBlur = 25;
-                ctx.shadowColor = '#00aaff';
-                ctx.fillStyle = '#3388ff';
+                ctx.shadowBlur = 28;
+                ctx.shadowColor = '#00ccff';
+                ctx.fillStyle = '#2277ff';
                 ctx.beginPath();
                 ctx.arc(e.x, e.y, e.size, 0, Math.PI*2);
                 ctx.fill();
 
-                ctx.fillStyle = '#ff2222';
-                ctx.beginPath(); ctx.arc(e.x-7, e.y-6, 5, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(e.x+7, e.y-6, 5, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#ff4444';
+                ctx.beginPath(); ctx.arc(e.x-8, e.y-7, 6, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(e.x+8, e.y-7, 6, 0, Math.PI*2); ctx.fill();
             }
 
             // Particelle
             for (let p of particles) {
-                ctx.globalAlpha = p.life / 25;
+                ctx.globalAlpha = p.life / 32;
                 ctx.fillStyle = p.color;
-                ctx.fillRect(p.x, p.y, 7, 7);
+                ctx.fillRect(p.x-3, p.y-3, 8, 8);
             }
             ctx.globalAlpha = 1;
 
@@ -265,6 +320,9 @@
             draw();
             requestAnimationFrame(gameLoop);
         }
+
+        // Pulsante ricomincia
+        document.getElementById('restartBtn').addEventListener('click', resetGame);
 
         resetGame();
         gameLoop();
