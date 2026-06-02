@@ -5,12 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>PURPLE ARROW - Zombie Dash</title>
     <style>
-        * {
-            user-select: none !important;
-            -webkit-user-select: none !important;
-            -moz-user-select: none !important;
-            -ms-user-select: none !important;
-        }
+        * { user-select: none !important; -webkit-user-select: none !important; -moz-user-select: none !important; -ms-user-select: none !important; }
         body { 
             margin:0; padding:0; background:#000; overflow:hidden; 
             height:100vh; width:100vw; display:flex; justify-content:center; align-items:center; 
@@ -179,7 +174,7 @@
         }
 
         function createExplosion(x, y, color = '#0ff', big = false) {
-            let amount = big ? 25 : 32;   // Ridotto da 60 a 25 per i boss
+            let amount = big ? 25 : 32;
             for (let i = 0; i < amount; i++) {
                 particles.push({
                     x, y,
@@ -219,11 +214,13 @@
 
             if (Math.random() < 0.07 + score/10000) enemies.push(new Enemy());
 
-            // Proiettili
+            // Proiettili normali
             for (let i = bullets.length-1; i >= 0; i--) {
                 bullets[i].x += bullets[i].speed;
                 if (bullets[i].x > canvas.width + 50) bullets.splice(i,1);
             }
+
+            // Super proiettili
             for (let i = superBullets.length-1; i >= 0; i--) {
                 let b = superBullets[i];
                 b.x += b.speed * Math.cos(b.angle * Math.PI/180);
@@ -231,7 +228,7 @@
                 if (b.x > canvas.width + 150) superBullets.splice(i,1);
             }
 
-            // Nemici normali
+            // === NEMICI NORMALI + SUPER DANNO ===
             for (let i = enemies.length-1; i >= 0; i--) {
                 let e = enemies[i];
                 e.x -= e.speed + 3.8;
@@ -244,6 +241,7 @@
                     continue;
                 }
 
+                // Proiettili normali
                 for (let j = bullets.length-1; j >= 0; j--) {
                     if (Math.hypot(bullets[j].x - e.x, bullets[j].y - e.y) < e.size + 6) {
                         e.health--;
@@ -257,9 +255,23 @@
                         break;
                     }
                 }
+
+                // **SUPER ORA FA DANNO**
+                for (let j = superBullets.length-1; j >= 0; j--) {
+                    let b = superBullets[j];
+                    if (Math.hypot(b.x - e.x, b.y - e.y) < e.size + 15) {
+                        e.health -= 3;
+                        if (e.health <= 0) {
+                            score += 130;
+                            superCharge = Math.min(100, superCharge + 22);
+                            createExplosion(e.x, e.y, '#f0f');
+                            enemies.splice(i,1);
+                        }
+                    }
+                }
             }
 
-            // Boss
+            // === BOSS + SUPER DANNO ===
             for (let i = bosses.length-1; i >= 0; i--) {
                 let b = bosses[i];
                 b.x -= b.speed + 2.4;
@@ -273,6 +285,7 @@
                     continue;
                 }
 
+                // Proiettili normali
                 for (let j = bullets.length-1; j >= 0; j--) {
                     if (Math.hypot(bullets[j].x - b.x, bullets[j].y - b.y) < b.size + 12) {
                         b.health -= 1.5;
@@ -280,10 +293,24 @@
                         if (b.health <= 0) {
                             score += 2000;
                             superCharge = 100;
-                            createExplosion(b.x, b.y, '#f0f', true); // esplosione ridotta
+                            createExplosion(b.x, b.y, '#f0f', true);
                             bosses.splice(i,1);
                         }
                         break;
+                    }
+                }
+
+                // **SUPER ORA FA TANTO DANNO AL BOSS**
+                for (let j = superBullets.length-1; j >= 0; j--) {
+                    let sb = superBullets[j];
+                    if (Math.hypot(sb.x - b.x, sb.y - b.y) < b.size + 20) {
+                        b.health -= 6;   // Danno forte
+                        if (b.health <= 0) {
+                            score += 2000;
+                            superCharge = 100;
+                            createExplosion(b.x, b.y, '#f0f', true);
+                            bosses.splice(i,1);
+                        }
                     }
                 }
             }
@@ -315,7 +342,7 @@
                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y + 35); ctx.stroke();
             }
 
-            // Freccetta viola
+            // Freccetta
             ctx.save();
             ctx.translate(player.x + 30, player.y + 22);
             ctx.shadowBlur = 50; ctx.shadowColor = '#ff00ff';
@@ -330,12 +357,15 @@
             ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(12, 0, 8, 0, Math.PI*2); ctx.fill();
             ctx.restore();
 
+            // Proiettili normali
             ctx.shadowBlur = 22; ctx.shadowColor = '#00ffff'; ctx.fillStyle = '#00ffff';
             for (let b of bullets) ctx.fillRect(b.x, b.y-5, 28, 10);
 
+            // Super (viola luminosa)
             ctx.shadowBlur = 45; ctx.shadowColor = '#ff00ff'; ctx.fillStyle = '#ff00ff';
             for (let b of superBullets) ctx.fillRect(b.x, b.y-7, 36, 14);
 
+            // Nemici
             for (let e of enemies) {
                 ctx.shadowBlur = 28; ctx.shadowColor = '#00ccff'; ctx.fillStyle = '#2277ff';
                 ctx.beginPath(); ctx.arc(e.x, e.y, e.size, 0, Math.PI*2); ctx.fill();
@@ -344,6 +374,7 @@
                 ctx.beginPath(); ctx.arc(e.x+8, e.y-7, 6, 0, Math.PI*2); ctx.fill();
             }
 
+            // Boss
             for (let b of bosses) {
                 ctx.shadowBlur = 50; ctx.shadowColor = '#ff0088';
                 ctx.fillStyle = '#c026d3';
